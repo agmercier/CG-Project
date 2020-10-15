@@ -1,5 +1,7 @@
 # CG-Project
 
+@bpietroianu
+
 ## Install instructions:
 ```bash
 git clone https://github.com/Von-Slagzee/CG-Project
