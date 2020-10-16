@@ -55,6 +55,10 @@ static glm::vec3 getFinalColor(const Scene& scene, const BoundingVolumeHierarchy
 
 static void setOpenGLMatrices(const Trackball& camera);
 static void renderOpenGL(const Scene& scene, const Trackball& camera, int selectedLight);
+static void trace(int level, Ray& ray, glm::vec3& color, const BoundingVolumeHierarchy& bvh);
+static void shade(int level, HitInfo hit, glm::vec3& color, Ray& ray, const BoundingVolumeHierarchy& bvh);
+static glm::vec3 computeDirectLight(HitInfo hit, Ray ray);
+static Ray computeReflectedRay(HitInfo hit, const Ray& ray);
 
 // This is the main rendering function. You are free to change this function in any way (including the function signature).
 static void renderRayTracing(const Scene& scene, const Trackball& camera, const BoundingVolumeHierarchy& bvh, Screen& screen)
@@ -70,9 +74,53 @@ static void renderRayTracing(const Scene& scene, const Trackball& camera, const 
                 float(y) / windowResolution.y * 2.0f - 1.0f
             };
             const Ray cameraRay = camera.generateRay(normalizedPixelPos);
+
             screen.setPixel(x, y, getFinalColor(scene, bvh, cameraRay));
         }
     }
+}
+
+//defined above
+static void trace(int level, Ray& ray,glm::vec3& color, const BoundingVolumeHierarchy& bvh) {
+    if (level <= 10) {//max level of recursion:10
+        HitInfo hitinfo;
+        if (bvh.intersect( ray, hitinfo)) {
+            shade(level, hitinfo, color, ray, bvh);
+        }
+        else {
+            color = glm::vec3{0};
+        }
+    }
+}
+
+//defined above
+static void shade(int level,HitInfo hit,glm::vec3& color, Ray& ray, const BoundingVolumeHierarchy& bvh) {
+    Ray reflectedRay = computeReflectedRay(hit, ray);
+
+    glm::vec3 directColor = computeDirectLight(hit, ray);
+    glm::vec3 reflectedColor = directColor;
+
+    if (hit.material.kd != glm::vec3{0}) {
+        trace(level + 1, reflectedRay, reflectedColor, bvh);
+    }
+    float reflection = 1.0f;    
+
+    color = directColor + reflection * reflectedColor;
+}
+
+//defined above
+//all other shading for pixel goes here
+static glm::vec3 computeDirectLight(HitInfo hit, Ray ray) {
+    return glm::vec3{ 0 };
+}
+
+//defined above
+static Ray computeReflectedRay(HitInfo hit, const Ray& ray) {
+    Ray reflectedRay;
+    reflectedRay.direction = ray.direction - 2 * ( glm::dot(hit.normal, glm::normalize(ray.direction)))* hit.normal;
+    reflectedRay.origin = ray.origin + ray.direction * ray.t;
+    reflectedRay.t = _FMAX;
+    return reflectedRay;
 }
 
 int main(int argc, char** argv)
